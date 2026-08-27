@@ -1,0 +1,25 @@
+{
+  "positions": {
+    "SOFI": {
+      "entry": 16.87,
+      "stop": 17.15,
+      "trail_stop": 17.70,
+      "tp1": 18.50,
+      "tp2": 19.00,
+      "shares": 5,
+      "capital": 100
+    }
+  },
+  "scheduled_times": ["09:45", "12:30", "16:00"],
+  "_add_more_positions_": {
+    "_example_": {
+      "entry": 0.00,
+      "stop": 0.00,
+      "trail_stop": 0.00,
+      "tp1": 0.00,
+      "tp2": 0.00,
+      "shares": 0,
+      "capital": 0
+    }
+  }
+}

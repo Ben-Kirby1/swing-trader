@@ -1,0 +1,14 @@
+# API keys
+config.py
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Watchdog state
+.watchdog_state.json
+.last_timestamp
+
+# OS files
+.DS_Store
+Thumbs.db
