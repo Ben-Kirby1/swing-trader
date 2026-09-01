@@ -9,6 +9,9 @@ __pycache__/
 .watchdog_state.json
 .last_timestamp
 
+# Data cache
+.cache/
+
 # OS files
 .DS_Store
 Thumbs.db

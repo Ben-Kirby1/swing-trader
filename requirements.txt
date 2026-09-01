@@ -1,5 +1,6 @@
 # Core
 numpy>=1.24
 
-# Only needed if running the multi-watchdog scheduler
-# (no extra deps — watchdog uses stdlib only)
+# All standard library — no external deps required for data, indicators, risk, monitor, backtest, or CLI
+# signals.py uses urllib.request for OpenRouter calls (stdlib)
+# data.py uses urllib.request, json, time, pathlib, os (stdlib)

@@ -1,89 +1,94 @@
-# Swing Trading Agent
+# Swing Trader v2
 
-Automated swing trading analysis system using technical indicators and LLM-driven decision support. Designed for 3-day to 3-week holding periods.
+## Multi-Strategy AI Swing Trading System
 
-## Overview
-
-Fetches real-time market data via the Twelve Data API, computes technical indicators (SMA, RSI, MACD, Bollinger Bands), and feeds the results into DeepSeek V4 Flash via OpenRouter for structured trade recommendation generation.
-
-Built as a personal tool for paper trading — not financial advice.
-
-## Components
-
-| Script | Purpose |
-|---|---|
-| `src/swing_trader.py` | Analyze 1-10 tickers: quote, indicators, LLM reasoning |
-| `src/multi_watchdog.py` | Real-time position monitor with alerting (15-min intervals) |
-| `src/watchdog_positions.json` | Position config (entry, stop, targets) |
-
-### Swing Trader (`src/swing_trader.py`)
+**Stack:** Python 3.10+ | Twelve Data API (800 calls/day free) | DeepSeek V4 Flash via OpenRouter
 
 ```
-python src/swing_trader.py AAPL
-python src/swing_trader.py SPY MSFT TSLA SOFI
+python swing-trader analyze AAPL
+python swing-trader analyze SPY MSFT NVDA
+python swing-trader watch
+python swing-trader portfolio
+python swing-trader backtest AAPL --capital 10000
+python swing-trader status
 ```
 
-For each ticker it:
-1. Fetches current price and previous close
-2. Pulls 100 days of daily candles
-3. Computes SMA20/50, RSI(14), MACD, Bollinger Bands, 52-week range
-4. Sends structured data to DeepSeek V4 Flash for recommendation
-5. Outputs technical context + LLM judgment
-
-### Multi-Ticker Watchdog (`src/multi_watchdog.py`)
-
-Runs continuously during market hours via cron (every 15 min). Silent mode by default — only produces output when something matters:
-
-- **Stop loss threatened or hit**
-- **Take-profit targets reached** (one-shot alerts)
-- **RSI extremes** (>75 overbought, <25 oversold)
-- **Large daily moves** (>4% drop, >8% surge)
-- **Scheduled briefings** at opening (9:45), midday (12:30), and closing (16:00)
-
-Config-driven position management — add or remove tickers without touching code.
-
-## Setup
+## Architecture
 
 ```
-# 1. Clone and enter directory
-git clone <repo-url>
-cd swing-trader
-
-# 2. Install dependencies
-pip install -r requirements.txt
-
-# 3. Add API keys
-cp config.example.py config.py
-# Edit config.py with your Twelve Data and OpenRouter keys
-
-# 4. Run an analysis
-python src/swing_trader.py AAPL
+swing_trader/
+├── __init__.py     # Package exports
+├── config.py       # Config loader (imports repo-root config.py)
+├── data.py         # Twelve Data API + local caching
+├── indicators.py   # 9 technical indicators (RSI, MACD, BB, ATR, ADX, OBV, VWAP, SMA, EMA)
+├── signals.py      # 4 strategies + ensemble voting + LLM narrative overlay
+├── risk.py         # ATR sizing, Kelly, portfolio metrics, correlation checks
+├── monitor.py      # Position watchdog (replaces multi_watchdog.py)
+├── backtest.py     # Walk-forward backtesting engine
+├── reporting.py    # Terminal/Discord report formatters
+└── cli.py          # Unified CLI entry point
 ```
 
-## API Keys
+## Quick Start
 
-- **Twelve Data** — [twelvedata.com](https://twelvedata.com) — 800 free API calls/day
-- **OpenRouter** — [openrouter.ai](https://openrouter.ai) — pay-per-token LLM access
+1. **Set up API keys:**
+   ```bash
+   cp config.example.py config.py
+   # Edit config.py with your Twelve Data key and OpenRouter key
+   ```
 
-Neither key is committed to the repo. Copy `config.example.py` to `config.py` and fill in your keys.
+2. **Run from repo root:**
+   ```bash
+   python -m swing_trader.cli analyze AAPL
+   python -m swing_trader.cli status
+   ```
 
-## Technical Indicators
+3. **Or install and use anywhere:**
+   ```bash
+   pip install -e .
+   swing-trader analyze AAPL
+   ```
 
-Calculated from raw price data (no external TA libraries):
+## Strategies
 
-- **SMA20 / SMA50** — Simple moving averages for trend direction
-- **RSI(14)** — Relative Strength Index for momentum/overbought-oversold
-- **MACD** — 12/26 EMA crossover signal
-- **Bollinger Bands (2σ, 20)** — Volatility envelope and squeeze detection
-- **52-week high/low** — Long-term context
+| # | Strategy | Condition | Weight |
+|---|----------|-----------|--------|
+| 1 | **Trend Follow** | EMA12>EMA26, price>SMA50, ADX>25 | 0.30 |
+| 2 | **Mean Reversion** | RSI<30 oversold or RSI>70 overbought | 0.25 |
+| 3 | **Breakout** | price>SMA20+2ATR with 1.5x volume | 0.25 |
+| 4 | **Momentum** | MACD rising, RSI 40-60, OBV climbing | 0.20 |
 
-## Stack
+## Position Monitoring
 
-- Python 3 (stdlib + numpy)
-- Twelve Data REST API
-- OpenRouter (DeepSeek V4 Flash)
-- Cron-based scheduling (Hermes Agent)
+Configure positions in `watchdog_positions.json`:
+
+```json
+{
+  "positions": {
+    "SOFI": {
+      "entry": 16.87, "stop": 15.80, "trail_stop": 17.00,
+      "tp1": 18.50, "tp2": 19.50, "shares": 5, "capital": 100
+    }
+  },
+  "scheduled_times": ["09:45", "12:30", "16:00"]
+}
+```
+
+## Backtesting
+
+Walk-forward validation: trains on 60 days, tests on next 20, slides by 20.
+
+```
+python swing-trader backtest SPY --capital 10000
+```
+
+Returns: total return, Sharpe, max drawdown, win rate, profit factor, trade log.
+
+## API Credits
+
+- **Twelve Data:** 800 calls/day free — 2 calls per ticker (price + time series)
+- **400 tickers/day maximum** — well within swing trading needs
 
 ---
 
-*Personal paper trading project. Not financial advice.*
+**Paper trading only.** This is an educational analysis system, not financial advice.
